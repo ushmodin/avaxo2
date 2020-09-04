@@ -4,7 +4,13 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
+	"github.com/ushmodin/avaxo2/internal/agent"
 	"github.com/ushmodin/avaxo2/internal/settings"
+)
+
+var (
+	listen string
+	port   int
 )
 
 // CmdAgent CLI Command run avaxo agent
@@ -19,5 +25,9 @@ func runAgent(ctx *cli.Context) error {
 	if err := settings.InitSettings(); err != nil {
 		return err
 	}
-	return nil
+	server, err := agent.NewServer(settings.AgentSettings.Listen)
+	if err != nil {
+		return err
+	}
+	return server.Run()
 }
