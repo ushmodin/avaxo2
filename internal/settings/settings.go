@@ -10,10 +10,12 @@ var (
 		Listen   string `ini:"listen"`
 		Keyfile  string `ini:"keyfile"`
 		Certfile string `ini:"certfile"`
+		Cafile   string `ini:"cafile"`
 	}{
 		Listen:   "0.0.0.0:8843",
 		Keyfile:  "avaxo2.key",
 		Certfile: "avaxo2.crt",
+		Cafile:   "ca.crt",
 	}
 	// ConfigPath path to config file
 	ConfigPath string
