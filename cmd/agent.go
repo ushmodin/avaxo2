@@ -25,7 +25,7 @@ func runAgent(ctx *cli.Context) error {
 	if err := settings.InitSettings(); err != nil {
 		return err
 	}
-	server, err := agent.NewServer(settings.AgentSettings.Listen)
+	server, err := agent.NewServer(settings.AgentSettings.Listen, settings.AgentSettings.Keyfile, settings.AgentSettings.Certfile)
 	if err != nil {
 		return err
 	}

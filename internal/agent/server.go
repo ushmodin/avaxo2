@@ -8,17 +8,21 @@ import (
 )
 
 type Server struct {
-	router *mux.Router
-	listen string
+	router   *mux.Router
+	listen   string
+	keyfile  string
+	certfile string
 }
 
 // NewServer create new Agent server
-func NewServer(listen string) (*Server, error) {
+func NewServer(listen, key, cert string) (*Server, error) {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/ping", pingHandler)
 	return &Server{
-		router: r,
-		listen: listen,
+		router:   r,
+		listen:   listen,
+		keyfile:  key,
+		certfile: cert,
 	}, nil
 }
 
@@ -32,5 +36,5 @@ func (srv *Server) Run() error {
 		Handler: srv.router,
 		Addr:    srv.listen,
 	}
-	return s.ListenAndServe()
+	return s.ListenAndServeTLS(srv.certfile, srv.keyfile)
 }

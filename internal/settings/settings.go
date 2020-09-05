@@ -7,9 +7,13 @@ import (
 var (
 	// AgentSettings config for agent mode
 	AgentSettings = struct {
-		Listen string `ini:"listen"`
+		Listen   string `ini:"listen"`
+		Keyfile  string `ini:"keyfile"`
+		Certfile string `ini:"certfile"`
 	}{
-		Listen: "0.0.0.0:8843",
+		Listen:   "0.0.0.0:8843",
+		Keyfile:  "avaxo2.key",
+		Certfile: "avaxo2.crt",
 	}
 	// ConfigPath path to config file
 	ConfigPath string
