@@ -3,11 +3,8 @@ package agent
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 type Server struct {
@@ -16,16 +13,13 @@ type Server struct {
 
 // NewServer create new Agent server
 func NewServer(listen, keyfile, certfile, cafile string) (*Server, error) {
-	r := mux.NewRouter()
-	r.HandleFunc("/api/ping", pingHandler)
-
 	tls, err := tlsConfig(certfile, keyfile, cafile)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &http.Server{
-		Handler:   r,
+		Handler:   newRouter(),
 		Addr:      listen,
 		TLSConfig: tls,
 	}
@@ -33,10 +27,6 @@ func NewServer(listen, keyfile, certfile, cafile string) (*Server, error) {
 	return &Server{
 		httpServer: s,
 	}, nil
-}
-
-func pingHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "OK")
 }
 
 // Run start http server
