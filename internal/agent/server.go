@@ -19,7 +19,7 @@ func NewServer(listen, keyfile, certfile, cafile string) (*Server, error) {
 	}
 
 	s := &http.Server{
-		Handler:   newRouter(),
+		Handler:   NewAgentRoute(NewAgent()),
 		Addr:      listen,
 		TLSConfig: tls,
 	}
