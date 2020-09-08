@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -29,6 +30,7 @@ func NewAgentRoute(agent *Agent) http.Handler {
 	handler := mux.NewRouter()
 	handler.HandleFunc("/api/ping", pingHandler)
 	handler.HandleFunc("/api/ls", wrapper.lsHandler)
+	handler.HandleFunc("/api/get", wrapper.getHandler)
 	return handler
 }
 
@@ -118,4 +120,26 @@ func formatFiles(files []DirItem) []byte {
 		}
 	}
 	return b.Bytes()
+}
+
+func (wrapper *agentHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	if paths := q["path"]; len(paths) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("parameter path not specified"))
+		return
+	}
+
+	path := q["path"][0]
+
+	f, err := wrapper.agent.GetFile(path)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("error while read path. " + err.Error()))
+		return
+	}
+	defer f.Close()
+
+	io.Copy(w, f)
 }

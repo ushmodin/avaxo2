@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"io"
 	"os"
 	"time"
 )
@@ -53,4 +54,8 @@ func (agent *Agent) ReadDir(path string) ([]DirItem, error) {
 		res = append(res, dirItem)
 	}
 	return res, nil
+}
+
+func (agent *Agent) GetFile(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
