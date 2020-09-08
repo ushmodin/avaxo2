@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -30,7 +31,8 @@ func NewAgentRoute(agent *Agent) http.Handler {
 	handler := mux.NewRouter()
 	handler.HandleFunc("/api/ping", pingHandler)
 	handler.HandleFunc("/api/ls", wrapper.lsHandler)
-	handler.HandleFunc("/api/get", wrapper.getHandler)
+	handler.HandleFunc("/api/file/get", wrapper.getHandler)
+	handler.HandleFunc("/api/file/put", wrapper.putHandler)
 	return handler
 }
 
@@ -141,5 +143,44 @@ func (wrapper *agentHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Reque
 	}
 	defer f.Close()
 
-	io.Copy(w, f)
+	if _, err := io.Copy(w, f); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("error while read path. " + err.Error()))
+	}
+}
+
+func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "PUT" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Only PUT supported"))
+	}
+
+	q := r.URL.Query()
+
+	if paths := q["path"]; len(paths) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("parameter path not specified"))
+		return
+	}
+
+	var mode os.FileMode = 0644
+	if modes := q["mode"]; len(modes) != 0 {
+		if m, err := strconv.Atoi(modes[0]); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("invalide parameter mode"))
+		} else {
+			mode = os.FileMode(m)
+		}
+
+		return
+	}
+
+	path := q["path"][0]
+
+	err := wrapper.agent.PutFile(path, mode, r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("error while read path. " + err.Error()))
+		return
+	}
 }

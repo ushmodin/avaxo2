@@ -59,3 +59,15 @@ func (agent *Agent) ReadDir(path string) ([]DirItem, error) {
 func (agent *Agent) GetFile(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
+
+func (agent *Agent) PutFile(path string, mode os.FileMode, reader io.Reader) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := io.Copy(f, reader); err != nil {
+		return err
+	}
+	return nil
+}
