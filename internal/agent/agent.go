@@ -1,13 +1,19 @@
 package agent
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
+
+	"github.com/ushmodin/avaxo2/internal/procexec"
 )
 
 // Agent provide agent commands
 type Agent struct {
+	procsMux sync.Mutex
+	procs    map[string]*procexec.Proc
 }
 
 // DirItem filesystem directory item information
@@ -19,9 +25,20 @@ type DirItem struct {
 	Error    string `json:"error"`
 }
 
+type ProcInfo struct {
+	Cmd      string   `json:"cmd"`
+	Args     []string `json:"args"`
+	Exited   bool     `json:"exited"`
+	ExitCode int      `json:"exitCode"`
+	Out      []byte   `json:"out"`
+	Created  string   `json:"created"`
+}
+
 // NewAgent create new agent
 func NewAgent() *Agent {
-	return &Agent{}
+	return &Agent{
+		procs: make(map[string]*procexec.Proc),
+	}
 }
 
 // ReadDir get directory listing
@@ -70,4 +87,52 @@ func (agent *Agent) PutFile(path string, mode os.FileMode, reader io.Reader) err
 		return err
 	}
 	return nil
+}
+
+func (agent *Agent) Exec(cmd string, args ...string) (string, error) {
+	proc := procexec.NewProc(cmd, args...)
+	if err := proc.Start(); err != nil {
+		return "", err
+	}
+	agent.procsMux.Lock()
+	agent.procs[proc.ID] = proc
+	agent.procsMux.Unlock()
+	return proc.ID, nil
+}
+
+func (agent *Agent) ProcInfo(id string) (ProcInfo, error) {
+	agent.procsMux.Lock()
+	proc, ok := agent.procs[id]
+	agent.procsMux.Unlock()
+
+	if !ok {
+		return ProcInfo{}, fmt.Errorf("Proc %s not found", id)
+	}
+	info := ProcInfo{
+		Cmd:      proc.Cmd,
+		Args:     proc.Args,
+		Exited:   proc.Exited(),
+		Out:      proc.Out(),
+		Created:  proc.Created().Format(time.RFC3339),
+		ExitCode: 0,
+	}
+
+	if proc.Running() && proc.Exited() {
+		ec, _ := proc.ExitCode()
+		info.ExitCode = ec
+	}
+
+	return info, nil
+}
+
+func (agent *Agent) ProcKill(id string) error {
+	agent.procsMux.Lock()
+	proc, ok := agent.procs[id]
+	agent.procsMux.Unlock()
+
+	if !ok {
+		return fmt.Errorf("Proc %s not found", id)
+	}
+
+	return proc.Kill()
 }

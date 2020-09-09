@@ -33,6 +33,13 @@ func NewAgentRoute(agent *Agent) http.Handler {
 	handler.HandleFunc("/api/ls", wrapper.lsHandler)
 	handler.HandleFunc("/api/file/get", wrapper.getHandler)
 	handler.HandleFunc("/api/file/put", wrapper.putHandler)
+	handler.HandleFunc("/api/proc/exec", wrapper.procExecHandler)
+	handler.HandleFunc("/api/proc/info/{id}", wrapper.procInfoHandler)
+
+	// handler.HandleFunc("/api/proc/get", nil)
+	// handler.HandleFunc("/api/proc/ps", nil)
+	// handler.HandleFunc("/api/proc/kill", nil)
+
 	return handler
 }
 
@@ -153,6 +160,7 @@ func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Reque
 	if r.Method != "PUT" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Only PUT supported"))
+		return
 	}
 
 	q := r.URL.Query()
@@ -183,4 +191,54 @@ func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Reque
 		w.Write([]byte("error while read path. " + err.Error()))
 		return
 	}
+}
+
+func (wrapper *agentHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Only POST supported"))
+		return
+	}
+
+	rq := struct {
+		Cmd  string   `json:"cmd"`
+		Args []string `json:"args"`
+	}{}
+
+	if err := json.NewDecoder(r.Body).Decode(&rq); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error while parse request body. " + err.Error()))
+		return
+	}
+
+	if len(rq.Cmd) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Illegal json format. 'cmd' not found"))
+		return
+	}
+
+	id, err := wrapper.agent.Exec(rq.Cmd, rq.Args...)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error while execute command. " + err.Error()))
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"procId": id,
+	})
+	w.Header().Set("Content-Type", "application/json")
+}
+
+func (wrapper *agentHTTPWrapper) procInfoHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	info, err := wrapper.agent.ProcInfo(id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	json.NewEncoder(w).Encode(info)
+	w.Header().Set("Content-Type", "application/json")
 }
