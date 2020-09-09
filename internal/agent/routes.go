@@ -36,10 +36,7 @@ func NewAgentRoute(agent *Agent) http.Handler {
 	handler.HandleFunc("/api/proc/exec", wrapper.procExecHandler)
 	handler.HandleFunc("/api/proc/{id}/info", wrapper.procInfoHandler)
 	handler.HandleFunc("/api/proc/{id}/kill", wrapper.procKillHandler)
-
-	// handler.HandleFunc("/api/proc/get", nil)
-	// handler.HandleFunc("/api/proc/ps", nil)
-	// handler.HandleFunc("/api/proc/kill", nil)
+	handler.HandleFunc("/api/proc/ps", wrapper.procPsHandler)
 
 	return handler
 }
@@ -254,4 +251,10 @@ func (wrapper *agentHTTPWrapper) procKillHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (wrapper *agentHTTPWrapper) procPsHandler(w http.ResponseWriter, r *http.Request) {
+	ps := wrapper.agent.ProcPs()
+	json.NewEncoder(w).Encode(ps)
+	w.Header().Set("Content-Type", "application/json")
 }

@@ -34,6 +34,14 @@ type ProcInfo struct {
 	Created  string   `json:"created"`
 }
 
+type ProcPsItem struct {
+	ID      string   `json:"ID"`
+	Cmd     string   `json:"cmd"`
+	Args    []string `json:"args"`
+	Exited  bool     `json:"exited"`
+	Created string   `json:"created"`
+}
+
 // NewAgent create new agent
 func NewAgent() *Agent {
 	return &Agent{
@@ -135,4 +143,18 @@ func (agent *Agent) ProcKill(id string) error {
 	}
 
 	return proc.Kill()
+}
+
+func (agent *Agent) ProcPs() []ProcPsItem {
+	ps := make([]ProcPsItem, len(agent.procs))
+	i := 0
+	for k, v := range agent.procs {
+		ps[i].ID = k
+		ps[i].Cmd = v.Cmd
+		ps[i].Args = v.Args
+		ps[i].Created = v.Created().Format(time.RFC3339)
+		ps[i].Exited = v.Exited()
+		i++
+	}
+	return ps
 }
