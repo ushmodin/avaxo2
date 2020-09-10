@@ -17,6 +17,17 @@ var (
 		Certfile: "avaxo2.crt",
 		Cafile:   "ca.crt",
 	}
+
+	// GruSettings config for gru mode
+	GruSettings = struct {
+		Keyfile  string `ini:"keyfile"`
+		Certfile string `ini:"certfile"`
+		Cafile   string `ini:"cafile"`
+	}{
+		Keyfile:  "avaxo2.key",
+		Certfile: "avaxo2.crt",
+		Cafile:   "ca.crt",
+	}
 	// ConfigPath path to config file
 	ConfigPath string
 )
@@ -35,6 +46,10 @@ func InitSettings() error {
 
 func readVars(cfg *ini.File) error {
 	if err := cfg.Section("minion").MapTo(&MinionSettings); err != nil {
+		return err
+	}
+
+	if err := cfg.Section("gru").MapTo(&GruSettings); err != nil {
 		return err
 	}
 	return nil
