@@ -1,4 +1,4 @@
-package agent
+package minion
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type agentHTTPWrapper struct {
-	agent *Agent
+type minionHTTPWrapper struct {
+	minion *Minion
 }
 
 type lsReponseFormat int
@@ -23,9 +23,9 @@ const (
 	formatJSON  = 1
 )
 
-func NewAgentRoute(agent *Agent) http.Handler {
-	wrapper := &agentHTTPWrapper{
-		agent,
+func NewMinionRoute(minion *Minion) http.Handler {
+	wrapper := &minionHTTPWrapper{
+		minion,
 	}
 
 	handler := mux.NewRouter()
@@ -45,7 +45,7 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "OK")
 }
 
-func (wrapper *agentHTTPWrapper) lsHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) lsHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	if paths := q["path"]; len(paths) == 0 {
@@ -83,7 +83,7 @@ func (wrapper *agentHTTPWrapper) lsHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	files, err := wrapper.agent.ReadDir(path)
+	files, err := wrapper.minion.ReadDir(path)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("error while read path. " + err.Error()))
@@ -129,7 +129,7 @@ func formatFiles(files []DirItem) []byte {
 	return b.Bytes()
 }
 
-func (wrapper *agentHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
 	if paths := q["path"]; len(paths) == 0 {
@@ -140,7 +140,7 @@ func (wrapper *agentHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Reque
 
 	path := q["path"][0]
 
-	f, err := wrapper.agent.GetFile(path)
+	f, err := wrapper.minion.GetFile(path)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("error while read path. " + err.Error()))
@@ -154,7 +154,7 @@ func (wrapper *agentHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "PUT" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Only PUT supported"))
@@ -183,7 +183,7 @@ func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Reque
 
 	path := q["path"][0]
 
-	err := wrapper.agent.PutFile(path, mode, r.Body)
+	err := wrapper.minion.PutFile(path, mode, r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("error while read path. " + err.Error()))
@@ -191,7 +191,7 @@ func (wrapper *agentHTTPWrapper) putHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (wrapper *agentHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Only POST supported"))
@@ -215,7 +215,7 @@ func (wrapper *agentHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	id, err := wrapper.agent.Exec(rq.Cmd, rq.Args...)
+	id, err := wrapper.minion.Exec(rq.Cmd, rq.Args...)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Error while execute command. " + err.Error()))
@@ -228,10 +228,10 @@ func (wrapper *agentHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func (wrapper *agentHTTPWrapper) procInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) procInfoHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	info, err := wrapper.agent.ProcInfo(id)
+	info, err := wrapper.minion.ProcInfo(id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -241,10 +241,10 @@ func (wrapper *agentHTTPWrapper) procInfoHandler(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func (wrapper *agentHTTPWrapper) procKillHandler(w http.ResponseWriter, r *http.Request) {
+func (wrapper *minionHTTPWrapper) procKillHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	err := wrapper.agent.ProcKill(id)
+	err := wrapper.minion.ProcKill(id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -253,8 +253,8 @@ func (wrapper *agentHTTPWrapper) procKillHandler(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusOK)
 }
 
-func (wrapper *agentHTTPWrapper) procPsHandler(w http.ResponseWriter, r *http.Request) {
-	ps := wrapper.agent.ProcPs()
+func (wrapper *minionHTTPWrapper) procPsHandler(w http.ResponseWriter, r *http.Request) {
+	ps := wrapper.minion.ProcPs()
 	json.NewEncoder(w).Encode(ps)
 	w.Header().Set("Content-Type", "application/json")
 }

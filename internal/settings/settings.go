@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	// AgentSettings config for agent mode
-	AgentSettings = struct {
+	// MinionSettings config for minion mode
+	MinionSettings = struct {
 		Listen   string `ini:"listen"`
 		Keyfile  string `ini:"keyfile"`
 		Certfile string `ini:"certfile"`
@@ -34,7 +34,7 @@ func InitSettings() error {
 }
 
 func readVars(cfg *ini.File) error {
-	if err := cfg.Section("agent").MapTo(&AgentSettings); err != nil {
+	if err := cfg.Section("minion").MapTo(&MinionSettings); err != nil {
 		return err
 	}
 	return nil

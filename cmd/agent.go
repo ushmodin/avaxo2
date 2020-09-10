@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/urfave/cli/v2"
-	"github.com/ushmodin/avaxo2/internal/agent"
+	"github.com/ushmodin/avaxo2/internal/minion"
 	"github.com/ushmodin/avaxo2/internal/settings"
 )
 
@@ -13,23 +11,22 @@ var (
 	port   int
 )
 
-// CmdAgent CLI Command run avaxo agent
-var CmdAgent = &cli.Command{
-	Name:   "agent",
-	Usage:  "run agent",
+// CmdMinion CLI Command run avaxo minion
+var CmdMinion = &cli.Command{
+	Name:   "minion",
+	Usage:  "run minion",
 	Action: runAgent,
 }
 
 func runAgent(ctx *cli.Context) error {
-	fmt.Println("Agent work")
 	if err := settings.InitSettings(); err != nil {
 		return err
 	}
-	server, err := agent.NewServer(
-		settings.AgentSettings.Listen,
-		settings.AgentSettings.Keyfile,
-		settings.AgentSettings.Certfile,
-		settings.AgentSettings.Cafile,
+	server, err := minion.NewServer(
+		settings.MinionSettings.Listen,
+		settings.MinionSettings.Keyfile,
+		settings.MinionSettings.Certfile,
+		settings.MinionSettings.Cafile,
 	)
 	if err != nil {
 		return err

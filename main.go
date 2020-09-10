@@ -19,7 +19,7 @@ func main() {
 			},
 		},
 		Commands: []*cli.Command{
-			cmd.CmdAgent,
+			cmd.CmdMinion,
 		},
 	}
 

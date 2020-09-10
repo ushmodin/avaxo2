@@ -1,4 +1,4 @@
-package agent
+package minion
 
 import (
 	"crypto/tls"
@@ -19,7 +19,7 @@ func NewServer(listen, keyfile, certfile, cafile string) (*Server, error) {
 	}
 
 	s := &http.Server{
-		Handler:   NewAgentRoute(NewAgent()),
+		Handler:   NewMinionRoute(NewMinion()),
 		Addr:      listen,
 		TLSConfig: tls,
 	}

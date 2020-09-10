@@ -1,4 +1,4 @@
-package agent
+package minion
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 	"github.com/ushmodin/avaxo2/internal/procexec"
 )
 
-// Agent provide agent commands
-type Agent struct {
+// Minion provide minion commands
+type Minion struct {
 	procsMux sync.Mutex
 	procs    map[string]*procexec.Proc
 }
@@ -42,15 +42,15 @@ type ProcPsItem struct {
 	Created string   `json:"created"`
 }
 
-// NewAgent create new agent
-func NewAgent() *Agent {
-	return &Agent{
+// NewMinion create new minion
+func NewMinion() *Minion {
+	return &Minion{
 		procs: make(map[string]*procexec.Proc),
 	}
 }
 
 // ReadDir get directory listing
-func (agent *Agent) ReadDir(path string) ([]DirItem, error) {
+func (minion *Minion) ReadDir(path string) ([]DirItem, error) {
 	d, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -81,11 +81,11 @@ func (agent *Agent) ReadDir(path string) ([]DirItem, error) {
 	return res, nil
 }
 
-func (agent *Agent) GetFile(path string) (io.ReadCloser, error) {
+func (minion *Minion) GetFile(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-func (agent *Agent) PutFile(path string, mode os.FileMode, reader io.Reader) error {
+func (minion *Minion) PutFile(path string, mode os.FileMode, reader io.Reader) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
 	if err != nil {
 		return err
@@ -97,21 +97,21 @@ func (agent *Agent) PutFile(path string, mode os.FileMode, reader io.Reader) err
 	return nil
 }
 
-func (agent *Agent) Exec(cmd string, args ...string) (string, error) {
+func (minion *Minion) Exec(cmd string, args ...string) (string, error) {
 	proc := procexec.NewProc(cmd, args...)
 	if err := proc.Start(); err != nil {
 		return "", err
 	}
-	agent.procsMux.Lock()
-	agent.procs[proc.ID] = proc
-	agent.procsMux.Unlock()
+	minion.procsMux.Lock()
+	minion.procs[proc.ID] = proc
+	minion.procsMux.Unlock()
 	return proc.ID, nil
 }
 
-func (agent *Agent) ProcInfo(id string) (ProcInfo, error) {
-	agent.procsMux.Lock()
-	proc, ok := agent.procs[id]
-	agent.procsMux.Unlock()
+func (minion *Minion) ProcInfo(id string) (ProcInfo, error) {
+	minion.procsMux.Lock()
+	proc, ok := minion.procs[id]
+	minion.procsMux.Unlock()
 
 	if !ok {
 		return ProcInfo{}, fmt.Errorf("Proc %s not found", id)
@@ -133,10 +133,10 @@ func (agent *Agent) ProcInfo(id string) (ProcInfo, error) {
 	return info, nil
 }
 
-func (agent *Agent) ProcKill(id string) error {
-	agent.procsMux.Lock()
-	proc, ok := agent.procs[id]
-	agent.procsMux.Unlock()
+func (minion *Minion) ProcKill(id string) error {
+	minion.procsMux.Lock()
+	proc, ok := minion.procs[id]
+	minion.procsMux.Unlock()
 
 	if !ok {
 		return fmt.Errorf("Proc %s not found", id)
@@ -145,10 +145,10 @@ func (agent *Agent) ProcKill(id string) error {
 	return proc.Kill()
 }
 
-func (agent *Agent) ProcPs() []ProcPsItem {
-	ps := make([]ProcPsItem, len(agent.procs))
+func (minion *Minion) ProcPs() []ProcPsItem {
+	ps := make([]ProcPsItem, len(minion.procs))
 	i := 0
-	for k, v := range agent.procs {
+	for k, v := range minion.procs {
 		ps[i].ID = k
 		ps[i].Cmd = v.Cmd
 		ps[i].Args = v.Args
