@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/urfave/cli/v2"
@@ -31,6 +32,10 @@ var CmdGru = &cli.Command{
 					Usage:    "target path",
 					Required: true,
 				},
+				&cli.BoolFlag{
+					Name:  "json",
+					Usage: "print in json",
+				},
 			},
 		},
 	},
@@ -55,13 +60,20 @@ func ls(ctx *cli.Context) error {
 	}
 	minion := ctx.String("minion")
 	path := ctx.String("path")
+	isJSON := ctx.IsSet("json")
 
 	files, err := g.Ls(minion, path)
 	if err != nil {
 		return err
 	}
 
-	out := model.PrintFiles(files)
-	fmt.Println(string(out))
+	if isJSON {
+		out, _ := json.Marshal(files)
+		fmt.Println(string(out))
+	} else {
+		out := model.PrintFiles(files)
+		fmt.Println(string(out))
+	}
+
 	return nil
 }
