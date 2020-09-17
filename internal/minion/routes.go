@@ -1,7 +1,6 @@
 package minion
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/ushmodin/avaxo2/internal/model"
 )
 
 type minionHTTPWrapper struct {
@@ -100,33 +100,11 @@ func (wrapper *minionHTTPWrapper) lsHandler(w http.ResponseWriter, r *http.Reque
 		w.Header().Set("Content-Type", "application/json; encoding=UTF-8")
 		w.Write(resp)
 	} else if format == formatPlain {
-		resp := formatFiles(files)
+		resp := model.PrintFiles(files)
 		w.Header().Set("Content-Type", "text/plain; encoding=UTF-8")
 		w.Write(resp)
 	}
 
-}
-
-func formatFiles(files []DirItem) []byte {
-	b := bytes.NewBuffer([]byte{})
-	b.WriteString(fmt.Sprintf("total %d\n", len(files)))
-	for _, f := range files {
-		var t string = "f"
-		var s = f.Size
-		if f.IsDir {
-			t = "d"
-			s = 0
-		} else if f.Error != "" {
-			t = "e"
-			s = 0
-		}
-		if f.Error != "" {
-			b.WriteString(fmt.Sprintf("%s %15d %30s %s(%s)\n", t, s, "", f.Name, f.Error))
-		} else {
-			b.WriteString(fmt.Sprintf("%s %15d %30s %s\n", t, s, f.Modified, f.Name))
-		}
-	}
-	return b.Bytes()
 }
 
 func (wrapper *minionHTTPWrapper) getHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli/v2"
 	"github.com/ushmodin/avaxo2/internal/gru"
+	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/settings"
 )
 
@@ -38,6 +41,10 @@ func runGru(ctx *cli.Context) error {
 }
 
 func ls(ctx *cli.Context) error {
+	if err := settings.InitSettings(); err != nil {
+		return err
+	}
+
 	g, err := gru.NewGru(
 		settings.GruSettings.Certfile,
 		settings.GruSettings.Keyfile,
@@ -53,10 +60,8 @@ func ls(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	printFiles(files)
+
+	out := model.PrintFiles(files)
+	fmt.Println(string(out))
 	return nil
-}
-
-func printFiles(files []interface{}) {
-
 }

@@ -3,10 +3,12 @@ package minion
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/procexec"
 )
 
@@ -17,30 +19,6 @@ type Minion struct {
 }
 
 // DirItem filesystem directory item information
-type DirItem struct {
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	Modified string `json:"modified"`
-	IsDir    bool   `json:"isDir"`
-	Error    string `json:"error"`
-}
-
-type ProcInfo struct {
-	Cmd      string   `json:"cmd"`
-	Args     []string `json:"args"`
-	Exited   bool     `json:"exited"`
-	ExitCode int      `json:"exitCode"`
-	Out      []byte   `json:"out"`
-	Created  string   `json:"created"`
-}
-
-type ProcPsItem struct {
-	ID      string   `json:"ID"`
-	Cmd     string   `json:"cmd"`
-	Args    []string `json:"args"`
-	Exited  bool     `json:"exited"`
-	Created string   `json:"created"`
-}
 
 // NewMinion create new minion
 func NewMinion() *Minion {
@@ -50,16 +28,17 @@ func NewMinion() *Minion {
 }
 
 // ReadDir get directory listing
-func (minion *Minion) ReadDir(path string) ([]DirItem, error) {
+func (minion *Minion) ReadDir(path string) ([]model.DirItem, error) {
+	log.Printf("LS: %s\n", path)
 	d, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	names, err := d.Readdirnames(-1)
 	d.Close()
-	res := make([]DirItem, 0, len(names))
+	res := make([]model.DirItem, 0, len(names))
 	for _, filename := range names {
-		dirItem := DirItem{
+		dirItem := model.DirItem{
 			Name: filename,
 			Size: 0,
 		}
@@ -78,6 +57,7 @@ func (minion *Minion) ReadDir(path string) ([]DirItem, error) {
 		}
 		res = append(res, dirItem)
 	}
+	log.Printf("Return %d files\n", len(res))
 	return res, nil
 }
 
@@ -108,15 +88,15 @@ func (minion *Minion) Exec(cmd string, args ...string) (string, error) {
 	return proc.ID, nil
 }
 
-func (minion *Minion) ProcInfo(id string) (ProcInfo, error) {
+func (minion *Minion) ProcInfo(id string) (model.ProcInfo, error) {
 	minion.procsMux.Lock()
 	proc, ok := minion.procs[id]
 	minion.procsMux.Unlock()
 
 	if !ok {
-		return ProcInfo{}, fmt.Errorf("Proc %s not found", id)
+		return model.ProcInfo{}, fmt.Errorf("Proc %s not found", id)
 	}
-	info := ProcInfo{
+	info := model.ProcInfo{
 		Cmd:      proc.Cmd,
 		Args:     proc.Args,
 		Exited:   proc.Exited(),
@@ -145,8 +125,8 @@ func (minion *Minion) ProcKill(id string) error {
 	return proc.Kill()
 }
 
-func (minion *Minion) ProcPs() []ProcPsItem {
-	ps := make([]ProcPsItem, len(minion.procs))
+func (minion *Minion) ProcPs() []model.ProcPsItem {
+	ps := make([]model.ProcPsItem, len(minion.procs))
 	i := 0
 	for k, v := range minion.procs {
 		ps[i].ID = k
