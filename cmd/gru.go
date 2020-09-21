@@ -47,6 +47,13 @@ var CmdGru = &cli.Command{
 			Action:          get,
 			SkipFlagParsing: true,
 		},
+		&cli.Command{
+			Name:            "put",
+			Usage:           "Put file to minion",
+			ArgsUsage:       "<local path> <remote path>",
+			Action:          put,
+			SkipFlagParsing: true,
+		},
 	},
 }
 
@@ -126,4 +133,34 @@ func get(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func put(ctx *cli.Context) error {
+	if err := settings.InitSettings(); err != nil {
+		return err
+	}
+
+	g, err := gru.NewGru(
+		settings.GruSettings.Certfile,
+		settings.GruSettings.Keyfile,
+		settings.GruSettings.Cafile,
+	)
+	if err != nil {
+		return err
+	}
+
+	if ctx.NArg() < 2 {
+		cli.ShowCommandHelp(ctx, "put")
+		return nil
+	}
+
+	minion := ctx.String("minion")
+	remote := ctx.Args().Get(1)
+	src, err := os.Open(ctx.Args().Get(0))
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	return g.PutFile(minion, remote, src)
 }

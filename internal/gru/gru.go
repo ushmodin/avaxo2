@@ -80,6 +80,30 @@ func (gru *Gru) GetFile(minion, path string) (io.ReadCloser, error) {
 	return rsp.Body, nil
 }
 
+// PutFile send file to minion
+func (gru *Gru) PutFile(minion, path string, r io.Reader) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   "/api/file/put",
+		RawQuery: (&url.Values{
+			"path": {path},
+		}).Encode(),
+	}
+
+	req, err := http.NewRequest("PUT", u.String(), r)
+	if err != nil {
+		return err
+	}
+	_, err = gru.httpClient.Do(req)
+	return err
+}
+
 func getMinionHost(val string) (string, error) {
 	u, err := url.ParseRequestURI(val)
 	if err == nil {
