@@ -3,6 +3,7 @@ package gru
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -55,6 +56,28 @@ func (gru *Gru) Ls(minion, path string) ([]model.DirItem, error) {
 	var res []model.DirItem
 	err = json.NewDecoder(rsp.Body).Decode(&res)
 	return res, err
+}
+
+// GetFile get file from minion by path
+func (gru *Gru) GetFile(minion, path string) (io.ReadCloser, error) {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return nil, err
+	}
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   "/api/file/get",
+		RawQuery: (&url.Values{
+			"path": {path},
+		}).Encode(),
+	}
+	rsp, err := gru.httpClient.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+	return rsp.Body, nil
 }
 
 func getMinionHost(val string) (string, error) {
