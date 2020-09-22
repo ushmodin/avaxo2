@@ -3,105 +3,27 @@ package gru
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/settings"
-	"github.com/ushmodin/avaxo2/internal/util"
 )
 
 type Gru struct {
-	httpClient *http.Client
+	port *Port
 }
 
 func NewGru(certfile, keyfile, cafile string) (*Gru, error) {
-	tls, err := util.TLSConfig(certfile, keyfile, cafile)
+	port, err := NewPort(certfile, keyfile, cafile)
 	if err != nil {
 		return nil, err
 	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tls,
-		},
-	}
-
 	return &Gru{
-		httpClient: client,
+		port: port,
 	}, nil
-}
-
-func (gru *Gru) Ls(minion, path string) ([]model.DirItem, error) {
-	host, err := getMinionHost(minion)
-	if err != nil {
-		return nil, err
-	}
-
-	u := &url.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   "/api/ls",
-		RawQuery: (&url.Values{
-			"path": {path},
-			"fmt":  {"json"},
-		}).Encode(),
-	}
-	rsp, err := gru.httpClient.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	defer rsp.Body.Close()
-	var res []model.DirItem
-	err = json.NewDecoder(rsp.Body).Decode(&res)
-	return res, err
-}
-
-// GetFile get file from minion by path
-func (gru *Gru) GetFile(minion, path string) (io.ReadCloser, error) {
-	host, err := getMinionHost(minion)
-	if err != nil {
-		return nil, err
-	}
-
-	u := &url.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   "/api/file/get",
-		RawQuery: (&url.Values{
-			"path": {path},
-		}).Encode(),
-	}
-	rsp, err := gru.httpClient.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	return rsp.Body, nil
-}
-
-// PutFile send file to minion
-func (gru *Gru) PutFile(minion, path string, r io.Reader) error {
-	host, err := getMinionHost(minion)
-	if err != nil {
-		return err
-	}
-
-	u := &url.URL{
-		Scheme: "https",
-		Host:   host,
-		Path:   "/api/file/put",
-		RawQuery: (&url.Values{
-			"path": {path},
-		}).Encode(),
-	}
-
-	req, err := http.NewRequest("PUT", u.String(), r)
-	if err != nil {
-		return err
-	}
-	_, err = gru.httpClient.Do(req)
-	return err
 }
 
 func getMinionHost(val string) (string, error) {
@@ -118,7 +40,69 @@ func getMinionHost(val string) (string, error) {
 	return "", errors.New("Minion not found")
 }
 
-// Exec execute command cmd with args on minion
-func (gru *Gru) Exec(cmd string, args []string, nowait bool, timeout int) error {
+func (gru *Gru) Ls(minion, path string, jsonFormat bool) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	files, err := gru.port.Ls(host, path)
+	if err != nil {
+		return err
+	}
+
+	if jsonFormat {
+		out, _ := json.Marshal(files)
+		fmt.Println(string(out))
+	} else {
+		out := model.PrintFiles(files)
+		fmt.Println(string(out))
+	}
+	return nil
+}
+
+func (gru *Gru) GetFile(minion, remote, local string) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	var dest io.WriteCloser
+	if local != "" {
+		dest, err := os.OpenFile(local, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer dest.Close()
+	} else {
+		dest = os.Stdout
+	}
+
+	reader, err := gru.port.GetFile(host, remote)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	_, err = io.Copy(dest, reader)
+	return err
+}
+
+func (gru *Gru) PutFile(minion, path, remote string) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	return gru.port.PutFile(host, remote, src)
+}
+
+func (gru *Gru) Exec(minion, cmd string, args []string, nowait bool, timeout int) error {
 	return nil
 }
