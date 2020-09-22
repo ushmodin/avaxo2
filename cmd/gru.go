@@ -54,6 +54,23 @@ var CmdGru = &cli.Command{
 			Action:          put,
 			SkipFlagParsing: true,
 		},
+		&cli.Command{
+			Name:      "exec",
+			Usage:     "Execute command on minion",
+			ArgsUsage: "<command> [args...]",
+			Action:    exec,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "nowait",
+					Usage: "Do't wait for the end of execution",
+				},
+				&cli.IntFlag{
+					Name:        "timeout",
+					Usage:       "Maximum waiting time (seconds)",
+					DefaultText: "60",
+				},
+			},
+		},
 	},
 }
 
@@ -163,4 +180,34 @@ func put(ctx *cli.Context) error {
 	defer src.Close()
 
 	return g.PutFile(minion, remote, src)
+}
+
+func exec(ctx *cli.Context) error {
+	nowait := ctx.Bool("nowait")
+	timeout := ctx.Int("timeout")
+	if !ctx.IsSet("timeout") {
+		timeout = 60
+	}
+
+	if ctx.NArg() < 1 {
+		cli.ShowCommandHelp(ctx, "exec")
+		return nil
+	}
+	cmd := ctx.Args().First()
+	args := ctx.Args().Tail()
+
+	if err := settings.InitSettings(); err != nil {
+		return err
+	}
+
+	g, err := gru.NewGru(
+		settings.GruSettings.Certfile,
+		settings.GruSettings.Keyfile,
+		settings.GruSettings.Cafile,
+	)
+	if err != nil {
+		return err
+	}
+
+	return g.Exec(cmd, args, nowait, timeout)
 }

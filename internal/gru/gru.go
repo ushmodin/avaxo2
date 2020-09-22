@@ -117,3 +117,8 @@ func getMinionHost(val string) (string, error) {
 	}
 	return "", errors.New("Minion not found")
 }
+
+// Exec execute command cmd with args on minion
+func (gru *Gru) Exec(cmd string, args []string, nowait bool, timeout int) error {
+	return nil
+}
