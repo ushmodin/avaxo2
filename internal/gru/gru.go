@@ -104,5 +104,14 @@ func (gru *Gru) PutFile(minion, path, remote string) error {
 }
 
 func (gru *Gru) Exec(minion, cmd string, args []string, nowait bool, timeout int) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	_, err = gru.port.Exec(host, cmd, args)
+	if err != nil {
+		return err
+	}
 	return nil
 }

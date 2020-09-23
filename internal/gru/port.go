@@ -1,6 +1,7 @@
 package gru
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -89,6 +90,26 @@ func (port *Port) PutFile(host, path string, r io.Reader) error {
 }
 
 // Exec execute command cmd with args on minion
-func (port *Port) Exec(cmd string, args []string, nowait bool, timeout int) error {
-	return nil
+func (port *Port) Exec(host string, cmd string, args []string) (string, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   "/api/proc/exec",
+	}
+	rq := model.ExecRq{
+		Cmd:  cmd,
+		Args: args,
+	}
+	body, err := json.Marshal(rq)
+	if err != nil {
+		return "", err
+	}
+
+	rsp, err := port.httpClient.Post(u.String(), "application/json", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	var res model.ExecRs
+	err = json.NewDecoder(rsp.Body).Decode(&res)
+	return res.ProcID, nil
 }

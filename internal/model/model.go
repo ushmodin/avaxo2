@@ -24,3 +24,12 @@ type ProcPsItem struct {
 	Exited  bool     `json:"exited"`
 	Created string   `json:"created"`
 }
+
+type ExecRq struct {
+	Cmd  string   `json:"cmd"`
+	Args []string `json:"args"`
+}
+
+type ExecRs struct {
+	ProcID string `json:"procId"`
+}

@@ -176,10 +176,7 @@ func (wrapper *minionHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	rq := struct {
-		Cmd  string   `json:"cmd"`
-		Args []string `json:"args"`
-	}{}
+	rq := model.ExecRq{}
 
 	if err := json.NewDecoder(r.Body).Decode(&rq); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -200,8 +197,8 @@ func (wrapper *minionHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"procId": id,
+	json.NewEncoder(w).Encode(model.ExecRs{
+		ProcId: id,
 	})
 	w.Header().Set("Content-Type", "application/json")
 }
