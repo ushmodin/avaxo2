@@ -36,6 +36,7 @@ func NewMinionRoute(minion *Minion) http.Handler {
 	handler.HandleFunc("/api/proc/exec", wrapper.procExecHandler)
 	handler.HandleFunc("/api/proc/{id}/info", wrapper.procInfoHandler)
 	handler.HandleFunc("/api/proc/{id}/kill", wrapper.procKillHandler)
+	handler.HandleFunc("/api/proc/{id}/tail", wrapper.procTailHandler)
 	handler.HandleFunc("/api/proc/ps", wrapper.procPsHandler)
 
 	return handler
@@ -198,7 +199,7 @@ func (wrapper *minionHTTPWrapper) procExecHandler(w http.ResponseWriter, r *http
 	}
 
 	json.NewEncoder(w).Encode(model.ExecRs{
-		ProcId: id,
+		ProcID: id,
 	})
 	w.Header().Set("Content-Type", "application/json")
 }
@@ -232,4 +233,12 @@ func (wrapper *minionHTTPWrapper) procPsHandler(w http.ResponseWriter, r *http.R
 	ps := wrapper.minion.ProcPs()
 	json.NewEncoder(w).Encode(ps)
 	w.Header().Set("Content-Type", "application/json")
+}
+
+func (wrapper *minionHTTPWrapper) procTailHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	wrapper.minion.ProcTail(id, w)
+	w.WriteHeader(http.StatusOK)
 }

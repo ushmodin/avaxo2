@@ -138,3 +138,14 @@ func (minion *Minion) ProcPs() []model.ProcPsItem {
 	}
 	return ps
 }
+
+func (minion *Minion) ProcTail(id string, w io.Writer) error {
+	minion.procsMux.Lock()
+	_, ok := minion.procs[id]
+	minion.procsMux.Unlock()
+
+	if !ok {
+		return fmt.Errorf("Proc %s not found", id)
+	}
+	return nil
+}
