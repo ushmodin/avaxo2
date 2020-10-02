@@ -16,6 +16,14 @@ var CmdMinion = &cli.Command{
 	Name:   "minion",
 	Usage:  "run minion",
 	Action: runAgent,
+	Subcommands: []*cli.Command{
+		&cli.Command{
+			Name:      "service",
+			Usage:     "Run as Windows service",
+			ArgsUsage: "<Service Name>",
+			Action:    runWinSrvAgent,
+		},
+	},
 }
 
 func runAgent(ctx *cli.Context) error {
@@ -32,4 +40,12 @@ func runAgent(ctx *cli.Context) error {
 		return err
 	}
 	return server.Run()
+}
+
+func runWinSrvAgent(ctx *cli.Context) error {
+	if ctx.NArg() < 1 {
+		cli.ShowCommandHelp(ctx, "service")
+		return nil
+	}
+	return runWinSrv(ctx.Args().First())
 }
