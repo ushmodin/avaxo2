@@ -27,15 +27,14 @@ func (m *minionWinService) Execute(args []string, r <-chan svc.ChangeRequest, ch
 			changes <- c.CurrentStatus
 			time.Sleep(100 * time.Millisecond)
 			changes <- c.CurrentStatus
-			m.elog.Info(1, fmt.Sprintf("Interrogate"))
 		case svc.Stop, svc.Shutdown:
 			loop = false
-			m.elog.Info(1, fmt.Sprintf("Stop"))
 		default:
 			m.elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
 		}
 	}
 
+	m.elog.Info(1, fmt.Sprintf("Stop"))
 	changes <- svc.Status{State: svc.StopPending}
 	return
 }
@@ -48,7 +47,9 @@ func runWinSrv(name string) error {
 	defer elog.Close()
 
 	elog.Info(1, fmt.Sprintf("starting %s service", name))
-	err = svc.Run(name, &minionWinService{})
+	err = svc.Run(name, &minionWinService{
+		elog: elog,
+	})
 	if err != nil {
 		elog.Error(1, fmt.Sprintf("%s service failed: %v", name, err))
 		return err
