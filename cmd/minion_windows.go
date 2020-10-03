@@ -7,6 +7,10 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
+
+	"github.com/ushmodin/avaxo2/internal/minion"
+	"github.com/ushmodin/avaxo2/internal/settings"
+
 )
 
 type minionWinService struct {
@@ -14,23 +18,51 @@ type minionWinService struct {
 }
 
 func (m *minionWinService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
-	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
-	time.Sleep(100 * time.Millisecond)
-	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+	if err := settings.InitSettings(); err != nil {
+		m.elog.Error(1, fmt.Sprintf("Error while init setttings: %v", err))
+		return false, 1
+	}
+	server, err := minion.NewServer(
+		settings.MinionSettings.Listen,
+		settings.MinionSettings.Keyfile,
+		settings.MinionSettings.Certfile,
+		settings.MinionSettings.Cafile,
+	)
+	if err != nil {
+		m.elog.Error(1, fmt.Sprintf("Error while create minion server: %v", err))
+		return false, 1
+	}
+	serverChan := make(chan error, 1)
+	changes <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
+
+	go func() {
+		m.elog.Info(1, fmt.Sprintf("Starting minion server"))
+		serverChan <- server.Run()
+	}()
 
 	loop := true
 	for loop {
-		c := <-r
-		switch c.Cmd {
-		case svc.Interrogate:
-			changes <- c.CurrentStatus
-			time.Sleep(100 * time.Millisecond)
-			changes <- c.CurrentStatus
-		case svc.Stop, svc.Shutdown:
+		select {
+		case err := <-serverChan:
+			if err != nil {
+				m.elog.Error(1, fmt.Sprintf("Minion server's error %v", err))
+			}
 			loop = false
-		default:
-			m.elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
+		case c := <-r:
+			switch c.Cmd {
+			case svc.Interrogate:
+				changes <- c.CurrentStatus
+				time.Sleep(100 * time.Millisecond)
+				changes <- c.CurrentStatus
+			case svc.Stop, svc.Shutdown:
+				loop = false
+				if err := server.Stop(); err != nil {
+					m.elog.Error(1, fmt.Sprintf("Minion server's error %v", err))
+				}
+			default:
+				m.elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
+			}
 		}
 	}
 

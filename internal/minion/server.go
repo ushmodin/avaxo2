@@ -32,3 +32,8 @@ func NewServer(listen, keyfile, certfile, cafile string) (*Server, error) {
 func (srv *Server) Run() error {
 	return srv.httpServer.ListenAndServeTLS("", "")
 }
+
+
+func (srv *Server) Stop() error {
+	return srv.httpServer.Close()
+}
