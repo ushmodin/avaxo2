@@ -6,13 +6,15 @@ import (
 	"net/http"
 )
 
+// FlushWriter decorator for http.ResponseWriter add immediate flush after write
 type FlushWriter struct {
 	io.Writer
 	w io.Writer
 	f http.Flusher
 }
 
-func NewFlushWriter(w io.Writer) (FlushWriter, error) {
+// NewFlushWriter create new FlushWriter
+func NewFlushWriter(w http.ResponseWriter) (FlushWriter, error) {
 	f, ok := w.(http.Flusher)
 	if !ok {
 		return FlushWriter{}, errors.New("Not implements http.Flusher")
