@@ -1,3 +1,8 @@
 /avaxo2
 /mod
 *.exe
+*.crt
+*.key
+*.srl
+*.csr
+*.ext
