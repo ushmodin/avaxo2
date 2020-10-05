@@ -1,13 +1,20 @@
 package procexec
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"log"
 	"os/exec"
+	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/smallnest/ringbuffer"
+)
+
+var (
+	procID = int32(0)
 )
 
 type Proc struct {
@@ -24,22 +31,20 @@ type Proc struct {
 
 func NewProc(cmd string, args ...string) *Proc {
 	c := exec.Command(cmd, args...)
+	out := ringbuffer.New(4096)
+	c.Stdout = out
+	c.Stderr = out
 
-	proc := Proc{
-		ID:      uuid.New().String(),
+	return &Proc{
+		ID:      fmt.Sprintf("%d", atomic.AddInt32(&procID, 1)),
 		Cmd:     cmd,
 		Args:    args,
-		out:     ringbuffer.New(4096),
+		out:     out,
 		cmd:     c,
 		running: false,
 		exited:  false,
 		created: time.Now(),
 	}
-
-	c.Stdout = proc.out
-	c.Stderr = proc.out
-
-	return &proc
 }
 
 func (proc *Proc) Start() error {
@@ -101,4 +106,23 @@ func (proc *Proc) Running() bool {
 
 func (proc *Proc) Created() time.Time {
 	return proc.created
+}
+
+func (proc *Proc) Tail(w io.Writer) error {
+	for !proc.Exited() {
+		b := make([]byte, 1024)
+		n, err := proc.out.Read(b)
+
+		if err == ringbuffer.ErrIsEmpty {
+			time.Sleep(100 * time.Millisecond)
+		} else if err != nil {
+			return err
+		} else if n != 0 {
+			if _, err := io.CopyN(w, bytes.NewBuffer(b), int64(n)); err != nil {
+				return err
+			}
+		}
+	}
+	log.Printf("Finished\n")
+	return nil
 }

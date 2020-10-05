@@ -109,9 +109,21 @@ func (gru *Gru) Exec(minion, cmd string, args []string, nowait bool, timeout int
 		return err
 	}
 
-	_, err = gru.port.Exec(host, cmd, args)
+	procID, err := gru.port.Exec(host, cmd, args)
 	if err != nil {
 		return err
 	}
+
+	if nowait {
+		fmt.Printf("ProcID: %s\n", procID)
+		return nil
+	}
+
+	reader, err := gru.port.ProcTail(host, procID)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	io.Copy(os.Stdout, reader)
 	return nil
 }

@@ -113,3 +113,16 @@ func (port *Port) Exec(host string, cmd string, args []string) (string, error) {
 	err = json.NewDecoder(rsp.Body).Decode(&res)
 	return res.ProcID, nil
 }
+
+func (port *Port) ProcTail(host string, procID string) (io.ReadCloser, error) {
+	u := &url.URL{
+		Scheme: "https",
+		Host:   host,
+		Path:   "/api/proc/" + procID + "/tail",
+	}
+	rsp, err := port.httpClient.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+	return rsp.Body, nil
+}

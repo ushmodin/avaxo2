@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ushmodin/avaxo2/internal/model"
+	"github.com/ushmodin/avaxo2/internal/util"
 )
 
 type minionHTTPWrapper struct {
@@ -239,6 +240,12 @@ func (wrapper *minionHTTPWrapper) procTailHandler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	wrapper.minion.ProcTail(id, w)
+	fw, err := util.NewFlushWriter(w)
+	if err == nil {
+		wrapper.minion.ProcTail(id, fw)
+	} else {
+		wrapper.minion.ProcTail(id, w)
+	}
+
 	w.WriteHeader(http.StatusOK)
 }

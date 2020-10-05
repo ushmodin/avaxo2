@@ -78,6 +78,7 @@ func (minion *Minion) PutFile(path string, mode os.FileMode, reader io.Reader) e
 }
 
 func (minion *Minion) Exec(cmd string, args ...string) (string, error) {
+	log.Printf("Exec: %s %v", cmd, args)
 	proc := procexec.NewProc(cmd, args...)
 	if err := proc.Start(); err != nil {
 		return "", err
@@ -141,11 +142,12 @@ func (minion *Minion) ProcPs() []model.ProcPsItem {
 
 func (minion *Minion) ProcTail(id string, w io.Writer) error {
 	minion.procsMux.Lock()
-	_, ok := minion.procs[id]
+	proc, ok := minion.procs[id]
 	minion.procsMux.Unlock()
 
 	if !ok {
 		return fmt.Errorf("Proc %s not found", id)
 	}
+	proc.Tail(w)
 	return nil
 }
