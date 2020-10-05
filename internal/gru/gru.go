@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/settings"
@@ -124,6 +125,22 @@ func (gru *Gru) Exec(minion, cmd string, args []string, nowait bool, timeout int
 		return err
 	}
 	defer reader.Close()
-	io.Copy(os.Stdout, reader)
-	return nil
+
+	if timeout <= 0 {
+		io.Copy(os.Stdout, reader)
+		return nil
+	}
+
+	copyFinished := make(chan error, 1)
+	go func() {
+		_, err := io.Copy(os.Stdout, reader)
+		copyFinished <- err
+	}()
+
+	select {
+	case err := <-copyFinished:
+		return err
+	case <-time.Tick(time.Duration(timeout) * time.Second):
+		return nil
+	}
 }
