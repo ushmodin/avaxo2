@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"log"
+	"sync"
+
 	"github.com/urfave/cli/v2"
 	"github.com/ushmodin/avaxo2/internal/gru"
 	"github.com/ushmodin/avaxo2/internal/settings"
@@ -64,6 +67,11 @@ var CmdGru = &cli.Command{
 					DefaultText: "60",
 				},
 			},
+		},
+		&cli.Command{
+			Name:   "forward",
+			Usage:  "Forward tcp traffic to minion",
+			Action: forward,
 		},
 	},
 }
@@ -171,4 +179,36 @@ func exec(ctx *cli.Context) error {
 	}
 
 	return g.Exec(minion, cmd, args, nowait, timeout)
+}
+
+func forward(ctx *cli.Context) error {
+	if err := settings.InitSettings(); err != nil {
+		return err
+	}
+	minion := ctx.String("minion")
+	forwards, err := settings.GetForwardsFor(minion)
+	if err != nil {
+		return err
+	}
+	g, err := gru.NewGru(
+		settings.GruSettings.Certfile,
+		settings.GruSettings.Keyfile,
+		settings.GruSettings.Cafile,
+	)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	for _, item := range forwards {
+		wg.Add(1)
+		go func(port int, target string) {
+			defer wg.Done()
+			if err := g.Forward(minion, port, target); err != nil {
+				log.Printf("Forwarding error: %s", err)
+			}
+		}(item.LocalPort, item.Target)
+	}
+	wg.Wait()
+	return nil
 }

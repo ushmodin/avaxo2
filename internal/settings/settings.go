@@ -2,6 +2,11 @@ package settings
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"regexp"
+	"strconv"
+	"strings"
 
 	ini "gopkg.in/ini.v1"
 )
@@ -34,6 +39,12 @@ var (
 	// ConfigPath path to config file
 	ConfigPath string
 )
+
+// ForwardSetting model of minion's forward settings
+type ForwardSetting struct {
+	LocalPort int
+	Target    string
+}
 
 // MinionAddress info about minion
 type MinionAddress struct {
@@ -73,4 +84,31 @@ func GetMinionAddress(name string) (MinionAddress, error) {
 		return MinionAddress{}, errors.New("minion settings not found")
 	}
 	return ma, nil
+}
+
+func GetForwardsFor(name string) ([]ForwardSetting, error) {
+	s := cfg.Section(name)
+	if s == nil {
+		return nil, fmt.Errorf("Minion's section %s not found", name)
+	}
+	k := s.Key("Forward")
+	if k == nil {
+		return []ForwardSetting{}, nil
+	}
+	var res []ForwardSetting
+	for _, line := range k.Strings(",") {
+		line = strings.TrimSpace(line)
+		if ok, err := regexp.MatchString("\\d+:[\\w\\d-._]+:\\d+", line); !ok || err != nil {
+			log.Printf("Can't parse forward line: %s", line)
+			continue
+		}
+		idx := strings.Index(line, ":")
+		localPort, _ := strconv.Atoi(line[:idx])
+		target := line[idx+1:]
+		res = append(res, ForwardSetting{
+			LocalPort: localPort,
+			Target:    target,
+		})
+	}
+	return res, nil
 }

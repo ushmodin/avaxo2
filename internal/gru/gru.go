@@ -144,3 +144,23 @@ func (gru *Gru) Exec(minion, cmd string, args []string, nowait bool, timeout int
 		return nil
 	}
 }
+
+func (gru *Gru) Forward(minion string, port int, target string) error {
+	host, err := getMinionHost(minion)
+	if err != nil {
+		return err
+	}
+
+	conn, err := gru.port.WsForward(host)
+	if err != nil {
+		return nil
+	}
+	defer conn.Close()
+
+	err = forwardInit(conn)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}

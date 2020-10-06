@@ -33,3 +33,22 @@ type ExecRq struct {
 type ExecRs struct {
 	ProcID string `json:"procId"`
 }
+
+type ForwardPacketType int
+
+const (
+	ForwardOK    ForwardPacketType = 0
+	ForwardInit  ForwardPacketType = 1
+	ForwardStart ForwardPacketType = 100
+	ForwardBytes ForwardPacketType = 200
+)
+
+type ForwardPacketBody struct {
+	Str   string `json:"s"`
+	Bytes []byte `json:"b"`
+}
+
+type ForwardPacket struct {
+	Type ForwardPacketType `json:"type"`
+	Body ForwardPacketBody `json:"body"`
+}

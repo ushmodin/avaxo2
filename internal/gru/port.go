@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gorilla/websocket"
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/util"
 )
 
 type Port struct {
 	httpClient *http.Client
+	dialer     *websocket.Dialer
 }
 
 func NewPort(certfile, keyfile, cafile string) (*Port, error) {
@@ -27,8 +29,13 @@ func NewPort(certfile, keyfile, cafile string) (*Port, error) {
 		},
 	}
 
+	dialer := &websocket.Dialer{
+		TLSClientConfig: tls,
+	}
+
 	return &Port{
 		httpClient: client,
+		dialer:     dialer,
 	}, nil
 }
 
@@ -125,4 +132,14 @@ func (port *Port) ProcTail(host string, procID string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	return rsp.Body, nil
+}
+
+func (port *Port) WsForward(host string) (*websocket.Conn, error) {
+	u := &url.URL{
+		Scheme: "wss",
+		Host:   host,
+		Path:   "/api/forward",
+	}
+	c, _, err := port.dialer.Dial(u.String(), nil)
+	return c, err
 }

@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/util"
 )
@@ -39,6 +41,7 @@ func NewMinionRoute(minion *Minion) http.Handler {
 	handler.HandleFunc("/api/proc/{id}/kill", wrapper.procKillHandler)
 	handler.HandleFunc("/api/proc/{id}/tail", wrapper.procTailHandler)
 	handler.HandleFunc("/api/proc/ps", wrapper.procPsHandler)
+	handler.HandleFunc("/api/forward", wrapper.forwardHandler)
 
 	return handler
 }
@@ -248,4 +251,23 @@ func (wrapper *minionHTTPWrapper) procTailHandler(w http.ResponseWriter, r *http
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (wrapper *minionHTTPWrapper) forwardHandler(w http.ResponseWriter, r *http.Request) {
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Can't init web socket: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = forwardInit(conn)
+	if err != nil {
+		log.Printf("Error while init forward protocol: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
