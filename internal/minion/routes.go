@@ -264,10 +264,11 @@ func (wrapper *minionHTTPWrapper) forwardHandler(w http.ResponseWriter, r *http.
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = forwardInit(conn)
+	defer conn.Close()
+
+	err = wrapper.minion.Forward(conn)
 	if err != nil {
 		log.Printf("Error while init forward protocol: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }

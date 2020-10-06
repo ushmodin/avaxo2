@@ -37,10 +37,12 @@ type ExecRs struct {
 type ForwardPacketType int
 
 const (
-	ForwardOK    ForwardPacketType = 0
-	ForwardInit  ForwardPacketType = 1
-	ForwardStart ForwardPacketType = 100
-	ForwardBytes ForwardPacketType = 200
+	ForwardOK      ForwardPacketType = 0
+	ForwardInit    ForwardPacketType = 1
+	ForwardError   ForwardPacketType = 2
+	ForwardTarget  ForwardPacketType = 10
+	ForwardConnect ForwardPacketType = 20
+	ForwardBytes   ForwardPacketType = 200
 )
 
 type ForwardPacketBody struct {

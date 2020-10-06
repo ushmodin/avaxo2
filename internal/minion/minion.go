@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/procexec"
 )
@@ -149,5 +150,23 @@ func (minion *Minion) ProcTail(id string, w io.Writer) error {
 		return fmt.Errorf("Proc %s not found", id)
 	}
 	proc.Tail(w)
+	return nil
+}
+
+func (minion *Minion) Forward(wsConn *websocket.Conn) error {
+	if err := forwardInit(wsConn); err != nil {
+		return err
+	}
+	target, err := forwardGetTarget(wsConn)
+	if err != nil {
+		return err
+	}
+
+	targetConn, err := forwardConnect(wsConn, target)
+	if err != nil {
+		return err
+	}
+	defer targetConn.Close()
+
 	return nil
 }

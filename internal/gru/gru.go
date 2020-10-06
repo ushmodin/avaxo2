@@ -153,13 +153,20 @@ func (gru *Gru) Forward(minion string, port int, target string) error {
 
 	conn, err := gru.port.WsForward(host)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer conn.Close()
 
-	err = forwardInit(conn)
-	if err != nil {
-		return nil
+	if err := forwardInit(conn); err != nil {
+		return err
+	}
+
+	if err := forwardSendTarget(conn, target); err != nil {
+		return err
+	}
+
+	if err := forwardConnect(conn); err != nil {
+		return err
 	}
 
 	return nil
