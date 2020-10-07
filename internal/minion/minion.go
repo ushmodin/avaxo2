@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/procexec"
+	"github.com/ushmodin/avaxo2/internal/util"
 )
 
 // Minion provide minion commands
@@ -167,6 +168,9 @@ func (minion *Minion) Forward(wsConn *websocket.Conn) error {
 		return err
 	}
 	defer targetConn.Close()
+
+	go util.ForwardLocalTraffic(wsConn, targetConn)
+	util.ForwardWebsocketTraffic(targetConn, wsConn)
 
 	return nil
 }

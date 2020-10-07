@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/ushmodin/avaxo2/internal/model"
 	"github.com/ushmodin/avaxo2/internal/settings"
+	"github.com/ushmodin/avaxo2/internal/util"
 )
 
 type Gru struct {
@@ -151,23 +154,45 @@ func (gru *Gru) Forward(minion string, port int, target string) error {
 		return err
 	}
 
-	conn, err := gru.port.WsForward(host)
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer listener.Close()
+	log.Printf("Listing port %d with target %s on minion %s\n", port, target, minion)
+	for {
+		localConn, err := listener.Accept()
+		if err != nil {
+			return err
+		}
+		go gru.forwardConnection(localConn, host, target)
+	}
+}
 
-	if err := forwardInit(conn); err != nil {
-		return err
+func (gru *Gru) forwardConnection(localConn net.Conn, host string, target string) {
+	wsConn, err := gru.port.WsForward(host)
+	if err != nil {
+		log.Printf("Error while connect to minion: %v", err)
+		return
+	}
+	defer wsConn.Close()
+
+	if err := forwardInit(wsConn); err != nil {
+		log.Printf("Forward protocol initialization error: %v", err)
+		return
 	}
 
-	if err := forwardSendTarget(conn, target); err != nil {
-		return err
+	if err := forwardSendTarget(wsConn, target); err != nil {
+		log.Printf("Forward protocol initialization error: %v", err)
+		return
 	}
 
-	if err := forwardConnect(conn); err != nil {
-		return err
+	if err := forwardConnect(wsConn); err != nil {
+		log.Printf("Forward protocol initialization error: %v", err)
+		return
 	}
 
-	return nil
+	defer localConn.Close()
+	go util.ForwardWebsocketTraffic(localConn, wsConn)
+	util.ForwardLocalTraffic(wsConn, localConn)
 }

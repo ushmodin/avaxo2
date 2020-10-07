@@ -3,7 +3,9 @@ package minion
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/ushmodin/avaxo2/internal/model"
@@ -78,4 +80,59 @@ func forwardConnect(wsConn *websocket.Conn, target string) (net.Conn, error) {
 		return nil, err
 	}
 	return tcpConn, nil
+}
+
+func forwardLocalTraffic(wsConn *websocket.Conn, localConn net.Conn) {
+	defer localConn.Close()
+	defer wsConn.Close()
+
+	for {
+		buffer := make([]byte, 1024)
+		buffSize, err := localConn.Read(buffer)
+		if err != nil {
+			log.Printf("Error while read from local connection: %v\n", err)
+			return
+		}
+		if buffSize == 0 {
+			time.Sleep(100)
+			continue
+		}
+
+		log.Printf("%d bytes was read from local\n", buffSize)
+		err = wsConn.WriteJSON(model.ForwardPacket{
+			Type: model.ForwardBytes,
+			Body: model.ForwardPacketBody{
+				Bytes: buffer[:buffSize],
+			},
+		})
+		if err != nil {
+			log.Printf("Error while writer to web socket: %v\n", err)
+			return
+		}
+		log.Printf("bytes packet was send to websocket\n")
+	}
+
+}
+
+func forwardWebsocketTraffic(localConn net.Conn, wsConn *websocket.Conn) {
+	var data model.ForwardPacket
+	defer localConn.Close()
+	defer wsConn.Close()
+
+	for {
+		if err := wsConn.ReadJSON(&data); err != nil {
+			log.Printf("Error while read packet from websocket: %v\n", err)
+		}
+		if data.Type != model.ForwardBytes {
+			log.Printf("Incorrect packet from websocket. Type: %d\n", data.Type)
+			return
+		}
+		log.Printf("bytes packet was read from websocket\n")
+		n, err := localConn.Write(data.Body.Bytes)
+		if err != nil {
+			log.Printf("Error while writer to local connection: %v\n", err)
+			return
+		}
+		log.Printf("%d bytes was write to local connection", n)
+	}
 }
