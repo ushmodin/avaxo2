@@ -170,6 +170,8 @@ func (gru *Gru) Forward(minion string, port int, target string) error {
 }
 
 func (gru *Gru) forwardConnection(localConn net.Conn, host string, target string) {
+	defer localConn.Close()
+
 	wsConn, err := gru.port.WsForward(host)
 	if err != nil {
 		log.Printf("Error while connect to minion: %v", err)
@@ -192,7 +194,7 @@ func (gru *Gru) forwardConnection(localConn net.Conn, host string, target string
 		return
 	}
 
-	defer localConn.Close()
-	go util.ForwardWebsocketTraffic(localConn, wsConn)
-	util.ForwardLocalTraffic(wsConn, localConn)
+	go util.SendPings(wsConn)
+	go util.ForwardLocalTraffic(wsConn, localConn)
+	util.ForwardWebsocketTraffic(localConn, wsConn)
 }

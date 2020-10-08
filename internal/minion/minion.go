@@ -169,6 +169,7 @@ func (minion *Minion) Forward(wsConn *websocket.Conn) error {
 	}
 	defer targetConn.Close()
 
+	go util.SendPings(wsConn)
 	go util.ForwardLocalTraffic(wsConn, targetConn)
 	util.ForwardWebsocketTraffic(targetConn, wsConn)
 
