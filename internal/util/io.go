@@ -60,10 +60,6 @@ func ForwardWebsocketTraffic(localConn net.Conn, wsConn *websocket.Conn) {
 			log.Printf("incorrect websocket reader message type\n")
 			break
 		}
-		// for n, err := io.Copy(localConn, reader); err != nil; {
-		// 	if n == 0 {
-		// 		time.Sleep(100)
-		// 	}
 		if n, err := io.Copy(localConn, reader); err != nil {
 			break
 		} else if n == 0 {
@@ -71,14 +67,4 @@ func ForwardWebsocketTraffic(localConn net.Conn, wsConn *websocket.Conn) {
 		}
 	}
 
-}
-
-func SendPings(wsConn *websocket.Conn) {
-	for {
-		if err := wsConn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-			break
-		}
-		log.Println("Ping was send")
-		<-time.Tick(30 * time.Second)
-	}
 }

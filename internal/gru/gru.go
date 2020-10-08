@@ -194,7 +194,6 @@ func (gru *Gru) forwardConnection(localConn net.Conn, host string, target string
 		return
 	}
 
-	go util.SendPings(wsConn)
 	go util.ForwardLocalTraffic(wsConn, localConn)
 	util.ForwardWebsocketTraffic(localConn, wsConn)
 }
